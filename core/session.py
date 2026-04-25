@@ -16,6 +16,7 @@ def init_session() -> None:
         "conversation": [],
         "current_agent": "triage",
         "orders": [],
+        "pending_order": None,
         "reservations": [],
         "complaints": [],
         "guardrail_violations": [],
@@ -38,6 +39,7 @@ def reset_session() -> None:
         "conversation",
         "current_agent",
         "orders",
+        "pending_order",
         "reservations",
         "complaints",
         "guardrail_violations",
@@ -72,6 +74,18 @@ def save_order(items: list[dict[str, Any]], total: int) -> None:
     st.session_state["orders"].append({"items": items, "total": total})
 
 
+def set_pending_order(items: list[dict[str, Any]], total: int) -> None:
+    st.session_state["pending_order"] = {"items": items, "total": total}
+
+
+def get_pending_order() -> dict[str, Any] | None:
+    return st.session_state.get("pending_order")
+
+
+def clear_pending_order() -> None:
+    st.session_state["pending_order"] = None
+
+
 def save_reservation(
     date: str,
     time: str,
@@ -104,6 +118,13 @@ def save_complaint(issue_type: str, description: str, resolution: str) -> None:
 
 def set_current_agent(agent_key: str) -> None:
     st.session_state["current_agent"] = agent_key
+
+
+def get_last_assistant_agent() -> str | None:
+    for entry in reversed(st.session_state["conversation"]):
+        if entry["role"] == "assistant":
+            return entry.get("agent")
+    return None
 
 
 def get_current_agent_persona() -> dict[str, str]:

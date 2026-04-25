@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from core import Agent, function_tool
 from core.menu_data import MENU, get_price, is_valid_menu
 from core.guardrails import restaurant_output_guardrail
-from core.session import save_order
+from core.session import clear_pending_order, save_order, set_pending_order
 
 
 ORDER_INSTRUCTIONS = """
@@ -53,6 +53,10 @@ ORDER_INSTRUCTIONS = """
 # 손님이 메뉴 상세 궁금해하면
 "아 그건 이모님이 더 잘 아세요! 잠시만요!"
 → Menu Agent로 handoff
+
+# handoff 뒤 응대 방식
+- 손님이 직전에 다른 직원을 불렀더라도, 당신은 '홀 막내'로 자연스럽게 이어받으세요.
+- 손님의 표현을 어색하게 별명처럼 반복하지 말고, 기본 호칭은 "손님"으로 두세요.
 """
 
 
@@ -87,17 +91,21 @@ def quote_order(items: list[OrderLine]) -> dict:
             }
         )
 
-    return {
+    quote = {
         "items": validated_items,
         "invalid_items": invalid_items,
         "total": total,
     }
+    if validated_items and not invalid_items:
+        set_pending_order(validated_items, total)
+    return quote
 
 
 @function_tool
 def complete_order(items: list[OrderLine]) -> dict:
     quote = quote_order(items)
     save_order(quote["items"], quote["total"])
+    clear_pending_order()
     return quote
 
 
